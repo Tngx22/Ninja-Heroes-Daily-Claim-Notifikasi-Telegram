@@ -21,7 +21,7 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install selenium python-telegram-bot python-dotenv cloudscraper
+        pip install selenium python-telegram-bot python-dotenv requests
 
     - name: Download and Setup Geckodriver
       run: |
@@ -94,5 +94,4 @@ jobs:
           EMAIL20: ${{ secrets.EMAIL20 }}
           PASSWORD20: ${{ secrets.PASSWORD20 }}
           SERVER_NAME20: ${{ secrets.SERVER_NAME20 }}
-        # Tambahkan semua akun lainnya di sini
       run: python script.py
