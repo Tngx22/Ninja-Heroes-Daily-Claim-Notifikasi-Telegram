@@ -1,39 +1,38 @@
-name: Claim Rewards Automation
+name: Claim Rewards Workflow
 
 on:
   schedule:
-    - cron: "0 */6 * * *"  # Setiap 6 jam sekali
-  workflow_dispatch:      # Memungkinkan trigger manual
+    - cron: '0 */3 * * *'  # Menjadwalkan tugas setiap 3 jam sekali
+  workflow_dispatch:  # memungkinkan Anda untuk menjalankan secara manual
 
 jobs:
-  claim-rewards:
-    runs-on: ubuntu-latest
+  claim_rewards:
+    runs-on: ubuntu-latest  # Menjalankan di mesin Ubuntu terbaru
 
     steps:
-    # Langkah 1: Checkout repository
-    - name: Checkout Repository
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-    # Langkah 2: Setup Python
-    - name: Setup Python
-      uses: actions/setup-python@v4
+    - name: Set up Python
+      uses: actions/setup-python@v2
       with:
-        python-version: 3.10  # Sesuaikan dengan versi Python yang Anda gunakan
+        python-version: '3.9'  # Menggunakan Python 3.9
 
-    # Langkah 3: Install dependencies
-    - name: Install Dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt  # Pastikan Anda memiliki file `requirements.txt` yang berisi semua dependensi (termasuk Selenium)
+        pip install -r requirements.txt  # Pastikan Anda memiliki file requirements.txt
 
-    # Langkah 4: Download GeckoDriver
-    - name: Download GeckoDriver
+    - name: Install Selenium and Firefox
       run: |
-        wget https://github.com/mozilla/geckodriver/releases/latest/download/geckodriver-v0.33.0-linux64.tar.gz
-        mkdir -p drivers
-        tar -xvzf geckodriver-v0.33.0-linux64.tar.gz -C drivers
-        chmod +x drivers/geckodriver
+        sudo apt-get update
+        sudo apt-get install -y firefox-geckodriver
+        sudo apt-get install -y libgdk-pixbuf2.0-0
 
-    # Langkah 5: Jalankan skrip Python
-    - name: Run Claim Script
-      run: python script.py
+    - name: Run Claim Rewards Script
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        DATA_JSON: ${{ secrets.DATA_JSON }}  # Anda bisa menyimpan kredensial di Secrets GitHub
+      run: |
+        python main.py  # Pastikan `main.py` adalah nama skrip utama Anda
