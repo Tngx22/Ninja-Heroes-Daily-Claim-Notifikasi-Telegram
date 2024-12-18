@@ -21,7 +21,13 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install selenium python-telegram-bot python-dotenv cloudscraper
+
+    - name: Download and Setup Geckodriver
+      run: |
+        wget -q "https://github.com/mozilla/geckodriver/releases/download/v0.33.0/geckodriver-v0.33.0-linux64.tar.gz" -O geckodriver.tar.gz
+        tar -xzf geckodriver.tar.gz -C ./drivers
+        chmod +x ./drivers/geckodriver
 
     - name: Run Claim Script
       env:
@@ -88,5 +94,5 @@ jobs:
           EMAIL20: ${{ secrets.EMAIL20 }}
           PASSWORD20: ${{ secrets.PASSWORD20 }}
           SERVER_NAME20: ${{ secrets.SERVER_NAME20 }}
-        # Tambahkan semua akun di sini
+        # Tambahkan semua akun lainnya di sini
       run: python script.py
