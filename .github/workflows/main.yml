@@ -1,12 +1,12 @@
-name: Daily Rewards Automation
+name: Automation Script
 
 on:
-  schedule:
-    - cron: "0 */12 * * *"  # Jalankan setiap hari dan setiap 12 jam sekali : OTOMATIS 
-  workflow_dispatch:  # Memungkinkan trigger manual
+  push:
+    branches:
+      - main
 
 jobs:
-  run-automation:
+  run-script:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,82 +16,20 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.9
-
-    - name: Install Chrome and ChromeDriver
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y chromium-browser chromium-chromedriver
-        ln -s /usr/bin/chromedriver /usr/local/bin/chromedriver
+        python-version: "3.10"
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install selenium python-telegram-bot
 
-    - name: Run script
-      env:
-        TELEGRAM_API_TOKEN: ${{ secrets.TELEGRAM_API_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        CHROMEDRIVER_PATH: /usr/local/bin/chromedriver
-        EMAIL1: ${{ secrets.EMAIL1 }}
-        PASSWORD1: ${{ secrets.PASSWORD1 }}
-        SERVER_NAME1: ${{ secrets.SERVER_NAME1 }}
-        EMAIL2: ${{ secrets.EMAIL2 }}
-        PASSWORD2: ${{ secrets.PASSWORD2 }}
-        SERVER_NAME2: ${{ secrets.SERVER_NAME2 }}
-        EMAIL3: ${{ secrets.EMAIL3 }}
-        PASSWORD3: ${{ secrets.PASSWORD3 }}
-        SERVER_NAME3: ${{ secrets.SERVER_NAME3 }}
-        EMAIL4: ${{ secrets.EMAIL4 }}
-        PASSWORD4: ${{ secrets.PASSWORD4 }}
-        SERVER_NAME4: ${{ secrets.SERVER_NAME4 }}
-        EMAIL5: ${{ secrets.EMAIL5 }}
-        PASSWORD5: ${{ secrets.PASSWORD5 }}
-        SERVER_NAME5: ${{ secrets.SERVER_NAME5 }}
-        EMAIL6: ${{ secrets.EMAIL6 }}
-        PASSWORD6: ${{ secrets.PASSWORD6 }}
-        SERVER_NAME6: ${{ secrets.SERVER_NAME6 }}
-        EMAIL7: ${{ secrets.EMAIL7 }}
-        PASSWORD7: ${{ secrets.PASSWORD7 }}
-        SERVER_NAME7: ${{ secrets.SERVER_NAME7 }}
-        EMAIL8: ${{ secrets.EMAIL8 }}
-        PASSWORD8: ${{ secrets.PASSWORD8 }}
-        SERVER_NAME8: ${{ secrets.SERVER_NAME8 }}
-        EMAIL9: ${{ secrets.EMAIL9 }}
-        PASSWORD9: ${{ secrets.PASSWORD9 }}
-        SERVER_NAME9: ${{ secrets.SERVER_NAME9 }}
-        EMAIL10: ${{ secrets.EMAIL10 }}
-        PASSWORD10: ${{ secrets.PASSWORD10 }}
-        SERVER_NAME10: ${{ secrets.SERVER_NAME10 }}
-        EMAIL11: ${{ secrets.EMAIL11 }}
-        PASSWORD11: ${{ secrets.PASSWORD11 }}
-        SERVER_NAME11: ${{ secrets.SERVER_NAME11 }}
-        EMAIL12: ${{ secrets.EMAIL12 }}
-        PASSWORD12: ${{ secrets.PASSWORD12 }}
-        SERVER_NAME12: ${{ secrets.SERVER_NAME12 }}
-        EMAIL13: ${{ secrets.EMAIL13 }}
-        PASSWORD13: ${{ secrets.PASSWORD13 }}
-        SERVER_NAME13: ${{ secrets.SERVER_NAME13 }}
-        EMAIL14: ${{ secrets.EMAIL14 }}
-        PASSWORD14: ${{ secrets.PASSWORD14 }}
-        SERVER_NAME14: ${{ secrets.SERVER_NAME14 }}
-        EMAIL15: ${{ secrets.EMAIL15 }}
-        PASSWORD15: ${{ secrets.PASSWORD15 }}
-        SERVER_NAME15: ${{ secrets.SERVER_NAME15 }}
-        EMAIL16: ${{ secrets.EMAIL16 }}
-        PASSWORD16: ${{ secrets.PASSWORD16 }}
-        SERVER_NAME16: ${{ secrets.SERVER_NAME16 }}
-        EMAIL17: ${{ secrets.EMAIL17 }}
-        PASSWORD17: ${{ secrets.PASSWORD17 }}
-        SERVER_NAME17: ${{ secrets.SERVER_NAME17 }}
-        EMAIL18: ${{ secrets.EMAIL18 }}
-        PASSWORD18: ${{ secrets.PASSWORD18 }}
-        SERVER_NAME18: ${{ secrets.SERVER_NAME18 }}
-        EMAIL19: ${{ secrets.EMAIL19 }}
-        PASSWORD19: ${{ secrets.PASSWORD19 }}
-        SERVER_NAME19: ${{ secrets.SERVER_NAME19 }}
-        EMAIL20: ${{ secrets.EMAIL20 }}
-        PASSWORD20: ${{ secrets.PASSWORD20 }}
-        SERVER_NAME20: ${{ secrets.SERVER_NAME20 }}
+    - name: Set up ChromeDriver
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget unzip
+        wget https://chromedriver.storage.googleapis.com/131.0.6778.135/chromedriver_linux64.zip
+        unzip chromedriver_linux64.zip -d ./drivers/
+        chmod +x ./drivers/chromedriver
+
+    - name: Run Python script
       run: python script.py
