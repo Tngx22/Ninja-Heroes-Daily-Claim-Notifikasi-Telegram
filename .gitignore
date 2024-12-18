@@ -1,0 +1,22 @@
+# Environment files
+.env
+
+# Driver folder
+drivers/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+
+# Logs
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
