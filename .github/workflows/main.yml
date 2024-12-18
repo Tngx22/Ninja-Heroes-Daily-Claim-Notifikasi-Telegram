@@ -1,41 +1,30 @@
-name: Automated Login
+name: Auto Claim Rewards
 
 on:
   schedule:
-    # Run every 3 hours
-    - cron: "0 */3 * * *"
+    - cron: "0 */3 * * *"  # Jalankan setiap 3 jam
+  workflow_dispatch:  # Jalankan manual jika diperlukan
 
 jobs:
-  automation:
+  claim_rewards:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout Repository
+      uses: actions/checkout@v3
 
-      # Step 2: Set up Python
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.x
 
-      # Step 3: Install dependencies
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install selenium requests
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-      # Step 4: Install Firefox and Geckodriver
-      - name: Install Firefox and Geckodriver
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y firefox
-          chmod +x ./drivers/geckodriver
-
-            # Step 5: Set environment variables from secrets
-      - name: Set Environment Variables
-        env:
+    - name: Run Claim Script
+      env:
           TELEGRAM_API_TOKEN: ${{ secrets.TELEGRAM_API_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GECKODRIVER_PATH: ./drivers/geckodriver
@@ -99,8 +88,5 @@ jobs:
           EMAIL20: ${{ secrets.EMAIL20 }}
           PASSWORD20: ${{ secrets.PASSWORD20 }}
           SERVER_NAME20: ${{ secrets.SERVER_NAME20 }}
-        run: echo "Environment variables configured."
-
-      # Step 6: Run the script
-      - name: Run Python Script
-        run: python script.py
+        # Tambahkan semua akun di sini
+      run: python script.py
