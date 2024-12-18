@@ -7,9 +7,6 @@ from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.firefox.options import Options
 from datetime import datetime
 
-# -------------------------
-# KONFIGURASI LANGSUNG DI DALAM KODE
-# -------------------------
 TELEGRAM_BOT_TOKEN = "7518490579:AAFDdbjyO4u1L24ke76e_VSDUor-eAqkZgY"
 TELEGRAM_CHAT_ID = "7997521757"
 DATA_JSON = [
@@ -34,11 +31,8 @@ DATA_JSON = [
     {"username": "monyet1@gmail.com", "password": "monyet1", "server": 5},
     {"username": "naruto123@gmail.com", "password": "naruto123", "server": 24}
 ]
-GECKODRIVER_PATH = "./drivers/geckodriver"
+GECKODRIVER_PATH = os.path.abspath("./drivers/geckodriver")
 
-# -------------------------
-# FUNGSI PENGIRIMAN PESAN TELEGRAM
-# -------------------------
 def send_telegram_message(message, parse_mode="HTML"):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": parse_mode}
@@ -49,10 +43,14 @@ def send_telegram_message(message, parse_mode="HTML"):
     except requests.RequestException as e:
         print(f"❌ Gagal mengirim pesan Telegram: {e}")
 
-# -------------------------
-# KONFIGURASI SELENIUM
-# -------------------------
+def validate_geckodriver():
+    if not os.path.isfile(GECKODRIVER_PATH):
+        raise FileNotFoundError(f"❌ GeckoDriver tidak ditemukan di {GECKODRIVER_PATH}")
+    if not os.access(GECKODRIVER_PATH, os.X_OK):
+        raise PermissionError(f"❌ Tidak ada izin eksekusi untuk GeckoDriver di {GECKODRIVER_PATH}")
+
 def setup_driver():
+    validate_geckodriver()
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--disable-gpu")
@@ -63,9 +61,6 @@ def setup_driver():
     except Exception as e:
         raise RuntimeError(f"❌ Gagal menginisialisasi WebDriver: {e}")
 
-# -------------------------
-# FUNGSI PROSES KLAIM HADIAH
-# -------------------------
 def claim_rewards(account):
     username = account.get("username")
     password = account.get("password")
@@ -79,18 +74,15 @@ def claim_rewards(account):
     try:
         send_telegram_message(f"🔄 <b>Memulai klaim hadiah</b>\n👤 <b>Akun</b>: {username}\n🖥️ <b>Server</b>: {server}")
 
-        # Simulasi login
         driver.get("https://example.com/login")
         driver.find_element(By.ID, "username").send_keys(username)
         driver.find_element(By.ID, "password").send_keys(password)
         driver.find_element(By.ID, "login-button").click()
 
-        # Simulasi klaim hadiah
         driver.get(f"https://example.com/server/{server}/claim")
-        items = ["Item1", "Item2", "Item3"]  # Simulasi item yang diklaim
+        items = ["Item1", "Item2", "Item3"]
         item_list = "\n".join([f"• {item}" for item in items])
 
-        # Notifikasi klaim berhasil
         send_telegram_message(
             f"🎉 <b>Klaim Berhasil</b>\n👤 <b>Akun</b>: {username}\n🖥️ <b>Server</b>: {server}\n🎁 <b>Item yang Diterima:</b>\n{item_list}\n\n🕒 <i>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</i>"
         )
@@ -99,9 +91,6 @@ def claim_rewards(account):
     finally:
         driver.quit()
 
-# -------------------------
-# EKSEKUSI UTAMA
-# -------------------------
 if __name__ == "__main__":
     send_telegram_message("🚀 <b>Proses Klaim Hadiah Dimulai</b>")
     for account in DATA_JSON:
