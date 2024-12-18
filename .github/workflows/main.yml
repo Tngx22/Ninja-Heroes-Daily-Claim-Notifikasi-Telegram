@@ -1,12 +1,15 @@
-name: Automation Workflow
+name: CI Workflow
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  run-automation:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,16 +17,17 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Install Dependencies
-      run: sudo apt-get update && sudo apt-get install -y wget unzip
+      run: sudo apt-get update
 
     - name: Install Google Chrome
       run: |
-        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo apt-get install -y wget
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
         echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
 
-    - name: Verify Google Chrome Installation
+    - name: Verify Google Chrome Version
       run: google-chrome --version
 
     - name: Download ChromeDriver
@@ -35,8 +39,7 @@ jobs:
         chmod +x ./drivers/chromedriver
         rm chromedriver.zip
 
-    - name: Install Python Dependencies
-      run: pip install -r requirements.txt
-
     - name: Run Python Script
-      run: python script.py
+      run: |
+        python3 -m pip install -r requirements.txt
+        python3 script.py
