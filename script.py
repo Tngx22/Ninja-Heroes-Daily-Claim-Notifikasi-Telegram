@@ -4,9 +4,8 @@ import requests
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.firefox.options import Options
 
 # Load Environment Variables
 load_dotenv()
@@ -25,11 +24,13 @@ def send_telegram_message(message):
     except Exception as e:
         print(f"Failed to send Telegram message: {e}")
 
-# Setup Selenium Driver
+# Setup Selenium Driver with Headless Mode
 def setup_driver():
-    options = webdriver.FirefoxOptions()
-    options.headless = True
-    service = Service("./drivers/geckodriver")
+    options = Options()
+    options.headless = True  # Aktifkan mode headless
+    options.add_argument("--no-sandbox")  # Tambahan untuk lingkungan CI/CD
+    options.add_argument("--disable-dev-shm-usage")  # Hindari shared memory issue
+    service = Service("/usr/local/bin/geckodriver")  # Path ke Geckodriver
     return webdriver.Firefox(service=service, options=options)
 
 # Claim Process
@@ -39,15 +40,15 @@ def claim_rewards(account):
     server = account["server"]
     driver = setup_driver()
     try:
-        # Login Simulation (Modify URL and selectors for actual target site)
+        # Simulasi Login (Gantilah URL dan selektor sesuai kebutuhan)
         driver.get("https://example.com/login")
         driver.find_element(By.ID, "username").send_keys(username)
         driver.find_element(By.ID, "password").send_keys(password)
         driver.find_element(By.ID, "login-button").click()
 
-        # Simulate claim process
+        # Simulasi Proses Klaim
         driver.get(f"https://example.com/server/{server}/claim")
-        # Assume success notification appears
+        # Jika klaim berhasil, kirim notifikasi
         send_telegram_message(f"🎉 Klaim berhasil untuk akun: {username} di server {server} 🎮")
     except Exception as e:
         send_telegram_message(f"❌ Klaim gagal untuk akun: {username} - Error: {str(e)}")
