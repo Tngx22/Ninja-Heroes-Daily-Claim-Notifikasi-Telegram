@@ -1,45 +1,33 @@
-name: CI Workflow
+name: Run Geckodriver Script
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  build:
+  run-script:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Install Dependencies
-      run: sudo apt-get update
-
-    - name: Install Google Chrome
+    - name: Set up Geckodriver and Firefox
       run: |
-        sudo apt-get install -y wget
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
         sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
+        sudo apt-get install -y firefox
+        chmod +x ./drivers/geckodriver
 
-    - name: Verify Google Chrome Version
-      run: google-chrome --version
+    - name: Verify Firefox version
+      run: firefox --version
 
-    - name: Download ChromeDriver
-      run: |
-        CHROME_VERSION=$(google-chrome --version | grep -oP "\d+\.\d+\.\d+\.\d+" | cut -d '.' -f 1)
-        CHROMEDRIVER_VERSION=$(wget -qO- "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
-        wget "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" -O chromedriver.zip
-        unzip -o chromedriver.zip -d ./drivers/
-        chmod +x ./drivers/chromedriver
-        rm chromedriver.zip
+    - name: Verify Geckodriver version
+      run: ./drivers/geckodriver --version
 
-    - name: Run Python Script
-      run: |
-        python3 -m pip install -r requirements.txt
-        python3 script.py
+    - name: Run script
+      env:
+        TELEGRAM_API_TOKEN: ${{ secrets.TELEGRAM_API_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        GECKODRIVER_PATH: ./drivers/geckodriver
+      run: python script.py
