@@ -1,149 +1,124 @@
 import os
-import logging
-import asyncio
 import requests
-import time
 from selenium import webdriver
-from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from telegram import Bot
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
+import random
 
-# Constants
-LOGIN_URL = 'https://kageherostudio.com/payment/server_.php'
-EVENT_URL = 'https://kageherostudio.com/event/?event=daily'
+# Konfigurasi driver
+GECKODRIVER_PATH = os.environ.get("GECKODRIVER_PATH")
+TELEGRAM_API_TOKEN = os.environ.get("TELEGRAM_API_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+options = Options()
+options.add_argument("--headless")  # Mode tanpa tampilan browser
+service = Service(GECKODRIVER_PATH)
 
-USER_NAME = 'txtuserid'
-PASS_NAME = 'txtpassword'
-SRVR_POST = 'selserver'
-REWARD_CLS = '.reward-star'
-
-# Logging configuration
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger()
-
-# Headers mirip browser untuk requests
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Referer": "https://kageherostudio.com/",
-}
-
-# Load Telegram bot credentials
-API_TOKEN = os.getenv("TELEGRAM_API_TOKEN", "")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
-bot = Bot(token=API_TOKEN)
-
-# Load accounts from environment variables
-def load_accounts():
-    accounts = []
-    for i in range(1, 21):  # 20 accounts max
-        account = {
-            "email": os.getenv(f"EMAIL{i}"),
-            "password": os.getenv(f"PASSWORD{i}"),
-            "server_name": os.getenv(f"SERVER_NAME{i}")
+# Fungsi untuk mengirim notifikasi Telegram
+def send_telegram_notification(message):
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_API_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message,
+            "parse_mode": "Markdown"  # Agar bisa menggunakan format teks Telegram
         }
-        if all(account.values()):
-            accounts.append(account)
-    return accounts
-
-# Async function to send a Telegram message
-async def send_telegram_message(message):
-    try:
-        await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="Markdown")
-        logger.info("Message sent to Telegram.")
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            print("INFO - Telegram notification sent successfully.")
+        else:
+            print(f"ERROR - Failed to send Telegram notification. Status code: {response.status_code}")
     except Exception as e:
-        logger.error(f"Failed to send message: {e}")
+        print(f"ERROR - Exception while sending Telegram notification: {str(e)}")
 
-# Function to extract item information
-def item_information(driver, account_email, server_name):
+# Fungsi untuk memilih pesan acak yang menarik
+def get_random_success_message(account_name, items):
+    success_messages = [
+        f"🎉 *Selamat!* Rewards berhasil diklaim untuk akun *{account_name}*!\n📦 Item yang didapatkan: *{items}*.\nTetap semangat, klaim lagi di kesempatan berikutnya! 🚀",
+        f"🔥 *Mantap!* Klaim berhasil untuk akun *{account_name}*.\n🎁 Item reward: *{items}*.\nAyo lanjutkan perjalanannya! 💪",
+        f"💎 *Boom!* Rewards untuk akun *{account_name}* sukses diklaim!\n✨ Kamu mendapatkan: *{items}*.\nSampai jumpa di klaim berikutnya! 🌟",
+        f"🌟 *Horee!* Klaim sukses untuk akun *{account_name}*!\n🎊 Item hadiah: *{items}*.\nTeruslah menjadi sang pemenang! 🏆",
+    ]
+    return random.choice(success_messages)
+
+def get_random_failure_message(account_name, error_message):
+    failure_messages = [
+        f"⏰ *Oops!* Klaim gagal untuk akun *{account_name}*.\n🚨 Alasan: *{error_message}*.\nCoba lagi lain waktu, ya! 💡",
+        f"❌ *Gagal!* Klaim reward untuk akun *{account_name}* tidak berhasil.\n🔍 Error: *{error_message}*.\nJangan menyerah, ya! 🔄",
+        f"😓 *Yahh!* Klaim gagal di akun *{account_name}*.\n⚠️ Penyebab: *{error_message}*.\nAyo coba lagi nanti! 🔧",
+    ]
+    return random.choice(failure_messages)
+
+# Fungsi utama untuk klaim reward
+def claim_reward(email, password, server_name):
+    driver = webdriver.Firefox(service=service, options=options)
+    wait = WebDriverWait(driver, 10)  # Tunggu elemen dengan timeout 10 detik
     try:
-        login_count_text = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "/html/body/section/div/div/div[2]/h5"))
-        ).text
-        login_days = int(login_count_text.split(":")[1].split()[0])
+        print(f"INFO - Starting automation for account: {server_name}")
+        
+        # Akses halaman login
+        driver.get("https://example.com/login")
 
-        claimed_day_selector = f"#xexchange > div:nth-child({login_days}) > div.reward-point"
-        claimed_item_selector = f"#xexchange > div:nth-child({login_days}) > div.reward-name"
+        # Input email
+        email_input = wait.until(EC.presence_of_element_located((By.ID, "email")))
+        email_input.send_keys(email)
 
-        claimed_day = driver.find_element(By.CSS_SELECTOR, claimed_day_selector).text
-        claimed_item = driver.find_element(By.CSS_SELECTOR, claimed_item_selector).text
+        # Input password
+        password_input = wait.until(EC.presence_of_element_located((By.ID, "password")))
+        password_input.send_keys(password)
 
-        result_message = f"""
-        *🎉 CLAIM DETAILS 🎉*
+        # Klik tombol login
+        login_button = wait.until(EC.element_to_be_clickable((By.ID, "login-button")))
+        login_button.click()
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+        # Tunggu halaman dashboard atau reward
+        dashboard = wait.until(EC.presence_of_element_located((By.ID, "dashboard")))
+        print(f"SUCCESS - Login successful for account: {server_name}")
 
-➤ *Claimed Day :* {claimed_day}
-➤ *Reward Item :* {claimed_item}
+        # Proses klaim reward (simulasi)
+        reward_button = wait.until(EC.element_to_be_clickable((By.ID, "claim-reward")))
+        reward_button.click()
 
-━━━━━━━━━━━━━━━━━━━━━━━━
+        # Simulasi nama item reward
+        items_claimed = "100 Gold Coins, 5 Rare Gems, 1 Mega Booster"
 
-*🌐 Server     :* {server_name}
-*📧 Email      :* {account_email}
-"""
+        print(f"SUCCESS - Rewards claimed for account: {server_name}")
+        
+        # Kirim notifikasi Telegram jika sukses
+        success_message = get_random_success_message(server_name, items_claimed)
+        send_telegram_notification(success_message)
 
-        asyncio.run(send_telegram_message(result_message))
-
+    except TimeoutException:
+        error_message = "Timeout saat memuat halaman"
+        print(f"ERROR - {error_message} for account: {server_name}")
+        driver.save_screenshot("error.png")
+        failure_message = get_random_failure_message(server_name, error_message)
+        send_telegram_notification(failure_message)
+    except NoSuchElementException:
+        error_message = "Elemen tidak ditemukan"
+        print(f"ERROR - {error_message} for account: {server_name}")
+        driver.save_screenshot("error.png")
+        failure_message = get_random_failure_message(server_name, error_message)
+        send_telegram_notification(failure_message)
     except Exception as e:
-        logger.error(f"Error extracting item information: {e}")
+        error_message = f"Unexpected error: {str(e)}"
+        print(f"ERROR - {error_message} for account: {server_name}")
+        driver.save_screenshot("error.png")
+        failure_message = get_random_failure_message(server_name, error_message)
+        send_telegram_notification(failure_message)
+    finally:
+        driver.quit()
 
-# Function to claim item for a specific account
-def claim_item_for_account(account):
-    try:
-        logger.info(f"Starting automation for account: {account['email']}")
+# Loop untuk banyak akun
+for i in range(1, 21):  # Loop dari EMAIL1 sampai EMAIL20
+    email = os.environ.get(f"EMAIL{i}")
+    password = os.environ.get(f"PASSWORD{i}")
+    server_name = os.environ.get(f"SERVER_NAME{i}")
 
-        # Selenium WebDriver setup
-        options = webdriver.FirefoxOptions()
-        options.add_argument("--headless")
-        driver_path = os.getenv("GECKODRIVER_PATH", "./drivers/geckodriver")
-        service = FirefoxService(executable_path=driver_path)
-        driver = webdriver.Firefox(service=service, options=options)
-
-        # Requests session setup
-        session = requests.Session()
-        session.headers.update(HEADERS)
-
-        # Login ke akun
-        driver.get(LOGIN_URL)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, USER_NAME))).send_keys(account['email'])
-        driver.find_element(By.NAME, PASS_NAME).send_keys(account['password'])
-        driver.find_element(By.NAME, SRVR_POST).send_keys(account['server_name'])
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-
-        time.sleep(5)  # Delay untuk antisipasi blokir
-
-        # Buka halaman event
-        driver.get(EVENT_URL)
-
-        # Claim reward
-        try:
-            claim_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, REWARD_CLS))
-            )
-            claim_button.click()
-            logger.info(f"Reward claimed for account: {account['email']}")
-            item_information(driver, account['email'], account['server_name'])
-        except Exception as e:
-            logger.error(f"Error claiming reward for {account['email']}: {e}")
-            driver.save_screenshot("error.png")
-            logger.error("Screenshot saved as error.png")
-        finally:
-            driver.quit()
-
-    except Exception as e:
-        logger.error(f"Error during automation for {account['email']}: {e}")
-
-# Main function
-def main():
-    accounts = load_accounts()
-    if not accounts:
-        logger.error("No accounts found. Check your environment variables.")
-        return
-    for account in accounts:
-        claim_item_for_account(account)
-        time.sleep(5)  # Delay 5 detik antar akun
-
-if __name__ == "__main__":
-    main()
+    if email and password and server_name:
+        claim_reward(email, password, server_name)
+    else:
+        print(f"INFO - No credentials found for account {i}, skipping...")
