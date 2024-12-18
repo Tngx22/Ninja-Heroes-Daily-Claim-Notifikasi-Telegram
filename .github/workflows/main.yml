@@ -1,4 +1,4 @@
-name: Test Automation
+name: Automation Workflow
 
 on:
   push:
@@ -6,27 +6,29 @@ on:
       - main
 
 jobs:
-  selenium-tests:
+  run-automation:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
+    - name: Checkout Repository
       uses: actions/checkout@v3
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update && sudo apt-get upgrade -y
+        sudo apt-get install -y wget unzip
 
     - name: Set up ChromeDriver
       run: |
-        sudo apt-get update
-        sudo apt-get install -y wget unzip
         CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d '.' -f 1)
         CHROMEDRIVER_VERSION=$(wget -qO- "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
-        CHROMEDRIVER_URL="https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
-        wget $CHROMEDRIVER_URL -O chromedriver.zip
+        wget "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" -O chromedriver.zip
         unzip -o chromedriver.zip -d ./drivers/
-        rm chromedriver.zip
         chmod +x ./drivers/chromedriver
+        rm chromedriver.zip
 
-    - name: Install Python dependencies
+    - name: Install Python Dependencies
       run: pip install -r requirements.txt
 
-    - name: Run Tests
+    - name: Run Python Script
       run: python script.py
