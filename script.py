@@ -1,7 +1,7 @@
 import os
 import logging
 import asyncio
-import cloudscraper
+import requests
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.common.by import By
@@ -86,24 +86,32 @@ def claim_item_for_account(account):
     try:
         logger.info(f"Starting automation for account: {account['email']}")
 
+        # Create session for handling requests
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        })
+
+        # Login
+        payload = {
+            USER_NAME: account['email'],
+            PASS_NAME: account['password'],
+            SRVR_POST: account['server_name']
+        }
+        login_response = session.post(LOGIN_URL, data=payload)
+
+        if login_response.status_code == 200:
+            logger.info(f"Login successful for {account['email']}")
+        else:
+            logger.error(f"Login failed for {account['email']}: {login_response.status_code}")
+            return
+
         # Selenium WebDriver setup
         options = webdriver.FirefoxOptions()
         options.add_argument("--headless")
         driver_path = os.getenv("GECKODRIVER_PATH", "./drivers/geckodriver")
         service = FirefoxService(executable_path=driver_path)
         driver = webdriver.Firefox(service=service, options=options)
-
-        scraper = cloudscraper.create_scraper(browser={'custom': 'firefox'})
-        scraper.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        })
-
-        # Login to the account
-        driver.get(LOGIN_URL)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, USER_NAME))).send_keys(account['email'])
-        driver.find_element(By.NAME, PASS_NAME).send_keys(account['password'])
-        driver.find_element(By.NAME, SRVR_POST).send_keys(account['server_name'])
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 
         # Navigate to event page
         driver.get(EVENT_URL)
