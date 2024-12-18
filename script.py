@@ -2,6 +2,7 @@ import os
 import logging
 import asyncio
 import requests
+import time
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.common.by import By
@@ -21,6 +22,13 @@ REWARD_CLS = '.reward-star'
 # Logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger()
+
+# Headers mirip browser untuk requests
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Referer": "https://kageherostudio.com/",
+}
 
 # Load Telegram bot credentials
 API_TOKEN = os.getenv("TELEGRAM_API_TOKEN", "")
@@ -86,26 +94,6 @@ def claim_item_for_account(account):
     try:
         logger.info(f"Starting automation for account: {account['email']}")
 
-        # Create session for handling requests
-        session = requests.Session()
-        session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        })
-
-        # Login
-        payload = {
-            USER_NAME: account['email'],
-            PASS_NAME: account['password'],
-            SRVR_POST: account['server_name']
-        }
-        login_response = session.post(LOGIN_URL, data=payload)
-
-        if login_response.status_code == 200:
-            logger.info(f"Login successful for {account['email']}")
-        else:
-            logger.error(f"Login failed for {account['email']}: {login_response.status_code}")
-            return
-
         # Selenium WebDriver setup
         options = webdriver.FirefoxOptions()
         options.add_argument("--headless")
@@ -113,7 +101,20 @@ def claim_item_for_account(account):
         service = FirefoxService(executable_path=driver_path)
         driver = webdriver.Firefox(service=service, options=options)
 
-        # Navigate to event page
+        # Requests session setup
+        session = requests.Session()
+        session.headers.update(HEADERS)
+
+        # Login ke akun
+        driver.get(LOGIN_URL)
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, USER_NAME))).send_keys(account['email'])
+        driver.find_element(By.NAME, PASS_NAME).send_keys(account['password'])
+        driver.find_element(By.NAME, SRVR_POST).send_keys(account['server_name'])
+        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+
+        time.sleep(5)  # Delay untuk antisipasi blokir
+
+        # Buka halaman event
         driver.get(EVENT_URL)
 
         # Claim reward
@@ -126,6 +127,8 @@ def claim_item_for_account(account):
             item_information(driver, account['email'], account['server_name'])
         except Exception as e:
             logger.error(f"Error claiming reward for {account['email']}: {e}")
+            driver.save_screenshot("error.png")
+            logger.error("Screenshot saved as error.png")
         finally:
             driver.quit()
 
@@ -140,6 +143,7 @@ def main():
         return
     for account in accounts:
         claim_item_for_account(account)
+        time.sleep(5)  # Delay 5 detik antar akun
 
 if __name__ == "__main__":
     main()
