@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+import cloudscraper
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.common.by import By
@@ -8,27 +9,34 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from telegram import Bot
 
+# Constants
+LOGIN_URL = 'https://kageherostudio.com/payment/server_.php'
+EVENT_URL = 'https://kageherostudio.com/event/?event=daily'
+
+USER_NAME = 'txtuserid'
+PASS_NAME = 'txtpassword'
+SRVR_POST = 'selserver'
+REWARD_CLS = '.reward-star'
+
 # Logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger()
 
 # Load Telegram bot credentials
-API_TOKEN = os.getenv("TELEGRAM_API_TOKEN", "")  # Replace with GitHub Secrets or .env
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")  # Replace with your chat ID
-
-# Initialize the Telegram bot
+API_TOKEN = os.getenv("TELEGRAM_API_TOKEN", "")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 bot = Bot(token=API_TOKEN)
 
 # Load accounts from environment variables
 def load_accounts():
     accounts = []
-    for i in range(1, 24):  # Modify range for more accounts
+    for i in range(1, 21):  # 20 accounts max
         account = {
             "email": os.getenv(f"EMAIL{i}"),
             "password": os.getenv(f"PASSWORD{i}"),
             "server_name": os.getenv(f"SERVER_NAME{i}")
         }
-        if all(account.values()):  # Ensure all fields are populated
+        if all(account.values()):
             accounts.append(account)
     return accounts
 
@@ -55,17 +63,17 @@ def item_information(driver, account_email, server_name):
         claimed_item = driver.find_element(By.CSS_SELECTOR, claimed_item_selector).text
 
         result_message = f"""
-        *CLAIM DETAILS*
+        *🎉 CLAIM DETAILS 🎉*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-➤ *Claimed   :* {claimed_day}
-➤ *Item      :* {claimed_item}
+➤ *Claimed Day :* {claimed_day}
+➤ *Reward Item :* {claimed_item}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-*Server     :* {server_name}
-*Email      :* {account_email}
+*🌐 Server     :* {server_name}
+*📧 Email      :* {account_email}
 """
 
         asyncio.run(send_telegram_message(result_message))
@@ -78,37 +86,38 @@ def claim_item_for_account(account):
     try:
         logger.info(f"Starting automation for account: {account['email']}")
 
+        # Selenium WebDriver setup
         options = webdriver.FirefoxOptions()
-        options.add_argument("--headless")  # Run in headless mode
-
-        # Path to Geckodriver
+        options.add_argument("--headless")
         driver_path = os.getenv("GECKODRIVER_PATH", "./drivers/geckodriver")
         service = FirefoxService(executable_path=driver_path)
         driver = webdriver.Firefox(service=service, options=options)
 
-        driver.get("https://kageherostudio.com/event/?event=daily")
-        WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "btn-login")))
+        scraper = cloudscraper.create_scraper(browser={'custom': 'firefox'})
+        scraper.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        })
 
-        login_button = driver.find_element(By.CLASS_NAME, "btn-login")
-        login_button.click()
+        # Login to the account
+        driver.get(LOGIN_URL)
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, USER_NAME))).send_keys(account['email'])
+        driver.find_element(By.NAME, PASS_NAME).send_keys(account['password'])
+        driver.find_element(By.NAME, SRVR_POST).send_keys(account['server_name'])
+        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 
-        # Input email and password
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "#form-login > fieldset > div:nth-child(1) > input"))
-        ).send_keys(account['email'])
-        driver.find_element(By.CSS_SELECTOR, "#form-login > fieldset > div:nth-child(2) > input").send_keys(account['password'])
-        driver.find_element(By.CSS_SELECTOR, "#form-login > fieldset > div:nth-child(3) > button").click()
+        # Navigate to event page
+        driver.get(EVENT_URL)
 
-        # Claim item
+        # Claim reward
         try:
             claim_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "#xexchange > div.reward-content.dailyClaim.reward-star"))
+                EC.element_to_be_clickable((By.CSS_SELECTOR, REWARD_CLS))
             )
             claim_button.click()
+            logger.info(f"Reward claimed for account: {account['email']}")
             item_information(driver, account['email'], account['server_name'])
-        except Exception:
-            logger.info("Item already claimed or unavailable.")
-            item_information(driver, account['email'], account['server_name'])
+        except Exception as e:
+            logger.error(f"Error claiming reward for {account['email']}: {e}")
         finally:
             driver.quit()
 
