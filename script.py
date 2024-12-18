@@ -2,7 +2,7 @@ import os
 import logging
 import asyncio
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -12,21 +12,23 @@ from telegram import Bot
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger()
 
-# Telegram Bot Configuration
-API_TOKEN = os.getenv("TELEGRAM_API_TOKEN")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+# Load Telegram bot credentials
+API_TOKEN = os.getenv("TELEGRAM_API_TOKEN", "")  # Replace with GitHub Secrets or .env
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")  # Replace with your chat ID
+
+# Initialize the Telegram bot
 bot = Bot(token=API_TOKEN)
 
 # Load accounts from environment variables
 def load_accounts():
     accounts = []
-    for i in range(1, 24):  # Adjust range for the number of accounts
+    for i in range(1, 24):  # Modify range for more accounts
         account = {
             "email": os.getenv(f"EMAIL{i}"),
             "password": os.getenv(f"PASSWORD{i}"),
             "server_name": os.getenv(f"SERVER_NAME{i}")
         }
-        if all(account.values()):
+        if all(account.values()):  # Ensure all fields are populated
             accounts.append(account)
     return accounts
 
@@ -36,30 +38,36 @@ async def send_telegram_message(message):
         await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="Markdown")
         logger.info("Message sent to Telegram.")
     except Exception as e:
-        logger.error(f"Failed to send Telegram message: {e}")
+        logger.error(f"Failed to send message: {e}")
 
 # Function to extract item information
 def item_information(driver, account_email, server_name):
     try:
-        login_days = int(
-            WebDriverWait(driver, 10)
-            .until(EC.presence_of_element_located((By.XPATH, "/html/body/section/div/div/div[2]/h5")))
-            .text.split(":")[1].strip()
-        )
+        login_count_text = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "/html/body/section/div/div/div[2]/h5"))
+        ).text
+        login_days = int(login_count_text.split(":")[1].split()[0])
+
         claimed_day_selector = f"#xexchange > div:nth-child({login_days}) > div.reward-point"
         claimed_item_selector = f"#xexchange > div:nth-child({login_days}) > div.reward-name"
+
         claimed_day = driver.find_element(By.CSS_SELECTOR, claimed_day_selector).text
         claimed_item = driver.find_element(By.CSS_SELECTOR, claimed_item_selector).text
 
         result_message = f"""
         *CLAIM DETAILS*
-        ━━━━━━━━━━━━━━━━━━━━━━━━
-        ➤ *Claimed   :* {claimed_day}
-        ➤ *Item      :* {claimed_item}
-        ━━━━━━━━━━━━━━━━━━━━━━━━
-        *Server     :* {server_name}
-        *Email      :* {account_email}
-        """
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+➤ *Claimed   :* {claimed_day}
+➤ *Item      :* {claimed_item}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+*Server     :* {server_name}
+*Email      :* {account_email}
+"""
+
         asyncio.run(send_telegram_message(result_message))
 
     except Exception as e:
@@ -69,32 +77,38 @@ def item_information(driver, account_email, server_name):
 def claim_item_for_account(account):
     try:
         logger.info(f"Starting automation for account: {account['email']}")
-        options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--no-sandbox")
-        driver_path = os.getenv("CHROMEDRIVER_PATH", "./drivers/chromedriver")
-        service = Service(executable_path=driver_path)
-        driver = webdriver.Chrome(service=service, options=options)
-        driver.get("https://kageherostudio.com/event/?event=daily")
 
-        WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "btn-login"))).click()
+        options = webdriver.FirefoxOptions()
+        options.add_argument("--headless")  # Run in headless mode
+
+        # Path to Geckodriver
+        driver_path = os.getenv("GECKODRIVER_PATH", "./drivers/geckodriver")
+        service = FirefoxService(executable_path=driver_path)
+        driver = webdriver.Firefox(service=service, options=options)
+
+        driver.get("https://kageherostudio.com/event/?event=daily")
+        WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "btn-login")))
+
+        login_button = driver.find_element(By.CLASS_NAME, "btn-login")
+        login_button.click()
+
+        # Input email and password
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "#form-login > fieldset > div:nth-child(1) > input"))
-        ).send_keys(account["email"])
-        driver.find_element(By.CSS_SELECTOR, "#form-login > fieldset > div:nth-child(2) > input").send_keys(
-            account["password"]
-        )
+        ).send_keys(account['email'])
+        driver.find_element(By.CSS_SELECTOR, "#form-login > fieldset > div:nth-child(2) > input").send_keys(account['password'])
         driver.find_element(By.CSS_SELECTOR, "#form-login > fieldset > div:nth-child(3) > button").click()
 
+        # Claim item
         try:
-            WebDriverWait(driver, 10).until(
+            claim_button = WebDriverWait(driver, 10).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "#xexchange > div.reward-content.dailyClaim.reward-star"))
-            ).click()
-            item_information(driver, account["email"], account["server_name"])
+            )
+            claim_button.click()
+            item_information(driver, account['email'], account['server_name'])
         except Exception:
             logger.info("Item already claimed or unavailable.")
-            item_information(driver, account["email"], account["server_name"])
+            item_information(driver, account['email'], account['server_name'])
         finally:
             driver.quit()
 
