@@ -25,7 +25,7 @@ jobs:
 
     - name: Download and Setup Geckodriver
       run: |
-        wget -q "https://github.com/mozilla/geckodriver/releases/download/v0.33.0/geckodriver-v0.33.0-linux64.tar.gz" -O geckodriver.tar.gz
+        wget -q "https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz" -O geckodriver.tar.gz
         tar -xzf geckodriver.tar.gz -C ./drivers
         chmod +x ./drivers/geckodriver
 
@@ -95,3 +95,10 @@ jobs:
           PASSWORD20: ${{ secrets.PASSWORD20 }}
           SERVER_NAME20: ${{ secrets.SERVER_NAME20 }}
       run: python script.py
+
+    - name: Upload Screenshot on Failure
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: error-screenshots
+        path: error.png
