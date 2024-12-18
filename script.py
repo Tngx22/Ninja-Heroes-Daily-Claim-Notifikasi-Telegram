@@ -1,8 +1,7 @@
-import time
 import os
+import time
 import logging
 import asyncio
-import cloudscraper
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -87,7 +86,10 @@ def claim_item_for_account(account):
         options.add_argument("--no-sandbox")
 
         # Path to chromedriver
-        driver_path = os.getenv("CHROMEDRIVER_PATH", "./chromedriver")
+        driver_path = os.getenv("CHROMEDRIVER_PATH", "./drivers/chromedriver")
+        if not os.path.exists(driver_path):
+            raise FileNotFoundError(f"ChromeDriver not found at {driver_path}")
+        
         service = Service(executable_path=driver_path)
         driver = webdriver.Chrome(service=service, options=options)
 
