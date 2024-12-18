@@ -14,7 +14,25 @@ TELEGRAM_BOT_TOKEN = "7518490579:AAFDdbjyO4u1L24ke76e_VSDUor-eAqkZgY"
 TELEGRAM_CHAT_ID = "7997521757"
 DATA_JSON = [
     {"username": "nhx4@sika3.com", "password": "asd1234", "server": 34},
-    {"username": "naruto123@gmail.com", "password": "naruto123", "server": 24},
+    {"username": "nhx3@sika3.com", "password": "asd1234", "server": 34},
+    {"username": "nhx2@sika3.com", "password": "asd1234", "server": 34},
+    {"username": "nhtngx4@gmail.com", "password": "asd1234", "server": 34},
+    {"username": "nhtngx3@gmail.com", "password": "asd1234", "server": 34},
+    {"username": "nhtngx2@gmail.com", "password": "asd1234", "server": 34},
+    {"username": "nhtngx1@gmail.com", "password": "asd1234", "server": 34},
+    {"username": "nhx1@sika3.com", "password": "asd1234", "server": 34},
+    {"username": "gacor1@gmail.com", "password": "gacor1", "server": 2},
+    {"username": "tngxpoolunik@gmail.com", "password": "asd1234", "server": 34},
+    {"username": "asd07@sika3.com", "password": "asd1234", "server": 34},
+    {"username": "synxx1@sika3.com", "password": "asd1234", "server": 34},
+    {"username": "test123@gmail.com", "password": "test123", "server": 1},
+    {"username": "asd01@sika3.com", "password": "asd1234", "server": 34},
+    {"username": "hantu2@gmail.com", "password": "hantu2", "server": 1},
+    {"username": "hantu3@gmail.com", "password": "hantu3", "server": 1},
+    {"username": "hantu1@gmail.com", "password": "hantu1", "server": 1},
+    {"username": "hantu123@gmail.com", "password": "hantu123", "server": 9},
+    {"username": "monyet1@gmail.com", "password": "monyet1", "server": 5},
+    {"username": "naruto123@gmail.com", "password": "naruto123", "server": 24}
 ]
 GECKODRIVER_PATH = "./drivers/geckodriver"
 
