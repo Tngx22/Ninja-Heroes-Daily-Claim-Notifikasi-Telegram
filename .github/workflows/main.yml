@@ -1,12 +1,12 @@
-name: Auto Claim Rewards
+name: Run Selenium Claim Rewards
 
 on:
-  schedule:
-    - cron: "0 */3 * * *"  # Jalankan setiap 3 jam
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  claim_rewards:
+  run-claim-script:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,22 +16,30 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.x
+        python-version: "3.12"
 
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install selenium python-telegram-bot python-dotenv requests
+        pip install -r requirements.txt
+        sudo apt-get update
+        sudo apt-get install -y firefox
 
-    - name: Download and Setup Geckodriver
+    - name: Install Geckodriver
       run: |
-        wget -q "https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz" -O geckodriver.tar.gz
-        tar -xzf geckodriver.tar.gz -C ./drivers
-        chmod +x ./drivers/geckodriver
+        wget https://github.com/mozilla/geckodriver/releases/download/v0.33.0/geckodriver-v0.33.0-linux64.tar.gz
+        tar -xvzf geckodriver-v0.33.0-linux64.tar.gz
+        chmod +x geckodriver
+        sudo mv geckodriver /usr/local/bin/
 
-    - name: Run Claim Script
+    - name: Verify Installations
+      run: |
+        firefox --version
+        geckodriver --version
+
+    - name: Run Script
       env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DATA_JSON: ${{ secrets.DATA_JSON }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        DATA_JSON: ${{ secrets.DATA_JSON }}
       run: python script.py
