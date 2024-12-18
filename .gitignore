@@ -1,22 +1,9 @@
-# Environment files
-.env
-
-# Driver folder
-drivers/
-
-# Python cache
+# Ignore Python cache files
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
 
-# Virtual environment
-venv/
-env/
+# Ignore environment file
+.env
 
-# Logs
-*.log
-
-# System files
-.DS_Store
-Thumbs.db
+# Ignore driver binaries
+drivers/
