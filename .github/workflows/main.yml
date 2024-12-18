@@ -2,8 +2,8 @@ name: Claim Rewards Automation
 
 on:
   schedule:
-    - cron: "0 */6 * * *"  # Menjalankan setiap 6 jam
-  workflow_dispatch:  # Menjalankan manual jika diperlukan
+    - cron: "0 */6 * * *"  # Setiap 6 jam sekali
+  workflow_dispatch:      # Memungkinkan trigger manual
 
 jobs:
   claim-rewards:
@@ -20,15 +20,14 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install -r requirements.txt
-          wget https://github.com/mozilla/geckodriver/releases/download/v0.33.0/geckodriver-v0.33.0-linux64.tar.gz
-          tar -xzf geckodriver-v0.33.0-linux64.tar.gz
+          pip install selenium requests
+
+      - name: Download Geckodriver
+        run: |
+          wget -q -O geckodriver.tar.gz https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux64.tar.gz
+          tar -xvzf geckodriver.tar.gz
           chmod +x geckodriver
           sudo mv geckodriver /usr/local/bin/
 
-      - name: Run Script
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DATA_JSON: ${{ secrets.DATA_JSON }}
+      - name: Run Claim Script
         run: python script.py
