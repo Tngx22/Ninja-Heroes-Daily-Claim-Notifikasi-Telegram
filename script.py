@@ -1,35 +1,23 @@
 import os
 import json
 import requests
-import concurrent.futures
-import itertools
-import re
-import time
-from datetime import datetime, timedelta
-from pathlib import Path
+import platform
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.firefox.options import Options
-from bs4 import BeautifulSoup
+from pathlib import Path
 
 # Konstanta dan URL
 ROOT = Path(__file__).parent
 SYSTEM = platform.system()
 
-PERIOD = datetime.utcnow() + timedelta(hours=7)
-PERIOD_D = PERIOD.replace(month=PERIOD.month % 12 + 1, day=1) - timedelta(days=1)
 LOGIN_URL = 'https://kageherostudio.com/payment/server_.php'
-CLAIM_URL = 'https://kageherostudio.com/event/index_.php?act=daily'
 EVENT_URL = 'https://kageherostudio.com/event/?event=daily'
 USER_NAME = 'txtuserid'
 PASS_NAME = 'txtpassword'
-ITEM_POST = 'itemId'
-PROD_POST = 'periodId'
 SRVR_POST = 'selserver'
-REWARD_ID = 'data-id'
 REWARD_CLS = '.reward-star'
-REWARD_PROD = 'data-period'
 
 # Telegram Bot credentials
 TELEGRAM_BOT_TOKEN = "7518490579:AAFDdbjyO4u1L24ke76e_VSDUor-eAqkZgY"
@@ -97,22 +85,37 @@ def setup_driver():
         raise RuntimeError(f"❌ Gagal menginisialisasi WebDriver: {e}")
 
 
-def login(session, username, password):
-    """Login ke situs dengan kredensial yang diberikan"""
-    data = {USER_NAME: username, PASS_NAME: password}
-    try:
-        response = session.post(LOGIN_URL, data=data)
-        if response.status_code == 200 and "pembayaran.php" in response.url:
-            print(f"Login sukses untuk {username}")
-            return True
-        else:
-            print(f"Login gagal untuk {username}")
-            send_telegram_message(f"❌ Login gagal untuk {username}. Cek kredensial.")
-            return False
-    except Exception as e:
-        print(f"Terjadi kesalahan saat login: {e}")
-        send_telegram_message(f"❌ Terjadi kesalahan saat login untuk {username}: {e}")
+def login_event(driver, username, password):
+    """Login ke halaman event dengan kredensial yang diberikan"""
+    driver.get(EVENT_URL)
+    driver.find_element(By.NAME, USER_NAME).send_keys(username)
+    driver.find_element(By.NAME, PASS_NAME).send_keys(password)
+    driver.find_element(By.NAME, "login").click()
+    if "event" in driver.current_url:
+        print(f"✅ Login sukses untuk {username}")
+        return True
+    else:
+        print(f"❌ Login gagal untuk {username}")
+        send_telegram_message(f"❌ Login gagal untuk {username}")
         return False
+
+
+def claim_item(driver, username, server):
+    """Melakukan klaim item di halaman event"""
+    try:
+        driver.find_element(By.NAME, SRVR_POST).send_keys(str(server))
+        driver.find_element(By.ID, "claim-button").click()
+
+        # Cari item bertanda bintang
+        reward = driver.find_element(By.CSS_SELECTOR, REWARD_CLS)
+        if reward:
+            reward.click()  # Klik untuk klaim
+            driver.find_element(By.XPATH, "//button[text()='OKE']").click()  # Klik OKE di popup
+            send_telegram_message(f"🎉 Klaim sukses untuk {username} di server {server}")
+        else:
+            send_telegram_message(f"⚠️ Tidak ada item bintang untuk {username} di server {server}")
+    except Exception as e:
+        send_telegram_message(f"❌ Klaim gagal untuk {username} di server {server}. Error: {str(e)}")
 
 
 def user_claim(account):
@@ -124,30 +127,20 @@ def user_claim(account):
     driver = setup_driver()
     try:
         send_telegram_message(f"🔄 Memulai klaim untuk {username} di server {server}...")
-        driver.get("https://example.com/login")
-        driver.find_element(By.ID, "username").send_keys(username)
-        driver.find_element(By.ID, "password").send_keys(password)
-        driver.find_element(By.ID, "login-button").click()
-
-        driver.get(f"https://example.com/server/{server}/claim")
-        items = ["Item1", "Item2", "Item3"]
-        item_list = "\n".join([f"• {item}" for item in items])
-
-        send_telegram_message(
-            f"🎉 Klaim Berhasil\n👤 Akun: {username}\n🖥️ Server: {server}\n🎁 Item yang Diterima:\n{item_list}"
-        )
+        if login_event(driver, username, password):
+            claim_item(driver, username, server)
     except Exception as e:
-        send_telegram_message(f"❌ Klaim Gagal\n👤 Akun: {username}\n🖥️ Server: {server}\n🛑 Error: {str(e)}")
+        send_telegram_message(f"❌ Terjadi kesalahan: {e}")
     finally:
         driver.quit()
 
 
 def main():
-    """Fungsi utama untuk menjalankan klaim hadiah untuk semua akun"""
-    send_telegram_message("🚀 Proses Klaim Hadiah Dimulai...")
+    """Jalankan klaim hadiah untuk semua akun"""
+    send_telegram_message("🚀 Memulai proses klaim harian...")
     for account in DATA_JSON:
         user_claim(account)
-    send_telegram_message("✅ Semua Klaim Hadiah Telah Selesai!")
+    send_telegram_message("✅ Semua klaim telah selesai!")
 
 
 if __name__ == "__main__":
