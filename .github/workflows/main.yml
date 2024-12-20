@@ -1,13 +1,13 @@
-name: Claim Rewards Workflow
+name: KageHero Claim Bot
 
 on:
   schedule:
-    - cron: '0 */3 * * *'  # Menjadwalkan tugas setiap 3 jam sekali
-  workflow_dispatch:  # memungkinkan Anda untuk menjalankan secara manual
+    - cron: "0 */6 * * *"  # Menjalankan setiap 6 jam
+  workflow_dispatch:  # Menambahkan trigger manual jika ingin menjalankan kapan saja
 
 jobs:
-  claim_rewards:
-    runs-on: ubuntu-latest  # Menjalankan di mesin Ubuntu terbaru
+  claim_event:
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
@@ -16,23 +16,21 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.9'  # Menggunakan Python 3.9
+        python-version: '3.x'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt  # Pastikan Anda memiliki file requirements.txt
+        pip install -r requirements.txt
 
-    - name: Install Selenium and Firefox
+    - name: Download geckodriver
       run: |
         sudo apt-get update
-        sudo apt-get install -y firefox-geckodriver
-        sudo apt-get install -y libgdk-pixbuf2.0-0
+        sudo apt-get install -y wget
+        wget https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz
+        tar -xvzf geckodriver-v0.30.0-linux64.tar.gz
+        sudo mv geckodriver /usr/local/bin/
 
-    - name: Run Claim Rewards Script
-      env:
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        DATA_JSON: ${{ secrets.DATA_JSON }}  # Anda bisa menyimpan kredensial di Secrets GitHub
+    - name: Run the claim script
       run: |
-        python main.py  # Pastikan `main.py` adalah nama skrip utama Anda
+        python script.py
